@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# get vars from .env file
+[ -f .env ] && export $(grep  -v '^#' .env | grep -e '.=.' | tr '\r\n' ' ')
+
+function exec_start() {
+    docker-compose up -d
+}
+
+function exec_stop() {
+    docker stop $(docker ps -a -q) 
+}
+
+function exec_compose() {
+    docker-compose $@
+}
+
+function exec_composer() {
+    docker-compose exec php-fpm composer $@
+}
+
+function exec_sf() {
+    docker-compose exec php-fpm php bin/console $@
+}
+
+function exec_mysql() {
+    docker-compose exec database mysql $DATABASE_NAME -h$DATABASE_HOST -u$DATABASE_USER -p$DATABASE_PASSWORD $@
+}
+
+function exec_dump() {
+    docker-compose exec database mysqldump $DATABASE_NAME -h$DATABASE_HOST -u$DATABASE_USER -p$DATABASE_PASSWORD > ./config/sql/base.sql
+}
+
+function node_js {
+    export MSYS_NO_PATHCONV=1
+    UUID=$(date +%Y%m%d%H%M%S)
+    APP=$(basename $PWD)
+    HOME_DIR=/usr/src/$APP
+    GLOBAL_DIR=/usr/local/bin
+    docker run -it --rm -p 8080:8080 --name "node-$UUID" -v "$PWD:$HOME_DIR" -w "$HOME_DIR" node:8 $@
+    export MSYS_NO_PATHCONV=0
+}
+
+# bin/docker node -e 'console.log("coucou")'
+function exec_node {
+    node_js node $@
+}
+
+# bin/docker yarn init
+# bin/docker yarn install
+# bin/docker yarn start -a 0.0.0.0 -p 3000 
+function exec_yarn {
+    node_js yarn $@
+}
+
+exec_$@
+
+
